@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  dynamic-prompt-budget-allocator:
+    build: .
+    container_name: dynamic-prompt-budget-allocator
+    ports:
+      - "8000:8000"
+    environment:
+      - AUDIT_SECRET_KEY=dynamic-prompt-budget-allocator-prod-audit-key-2026
+      - MODEL_PROVIDER=mock
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
