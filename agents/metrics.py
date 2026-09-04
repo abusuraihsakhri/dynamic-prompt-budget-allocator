@@ -1,7 +1,6 @@
 """
 Prometheus Operational Metrics Exporter for dynamic-prompt-budget-allocator.
 """
-import time
 from typing import Dict, Any
 
 class SystemMetricsCollector:

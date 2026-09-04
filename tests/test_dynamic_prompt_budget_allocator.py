@@ -3,9 +3,13 @@ Automated Pytest Test Suite for Dynamic Prompt Budget Allocator.
 Domain: Long-Horizon Agent Context & State Architecture
 Standard: Autonomous Agent State Machine & Token Economy RFC
 """
+import os
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Set test audit key before importing modules that create global audit instances
+os.environ.setdefault("AUDIT_SECRET_KEY", "test-audit-key-for-unit-tests-only")
 
 import pytest
 from agents.base import PHIGuard, AuditLogger, SecurityException
@@ -63,3 +67,27 @@ def test_supervisor_consensus_and_audit():
     assert main(["audit", "--task-id", "CLI-TEST-01"]) == 0
     assert main(["chat", "Explain", "specifications"]) == 0
     assert main(["verify-audit"]) == 0
+
+
+def test_input_validation_rejects_nan():
+    """Ensure NaN and Infinity metric values are rejected."""
+    import pytest
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        SystemTaskPayload(task_id="T-NAN", target_identifier="K1", primary_metric=float("nan"))
+    with pytest.raises(ValidationError):
+        SystemTaskPayload(task_id="T-INF", target_identifier="K1", primary_metric=float("inf"))
+
+
+def test_batch_missing_file_returns_error():
+    """Batch command should return non-zero exit code for missing input file."""
+    result = main(["batch", "-i", "nonexistent_file_xyz.csv"])
+    assert result == 1
+
+
+def test_phi_redaction():
+    """PHIGuard.redact_phi should replace PII with placeholder."""
+    redacted = PHIGuard.redact_phi("Contact patient at 555-123-4567 or MRN-12345")
+    assert "555-123-4567" not in redacted
+    assert "MRN-12345" not in redacted
+    assert "[REDACTED_IDENTIFIER]" in redacted

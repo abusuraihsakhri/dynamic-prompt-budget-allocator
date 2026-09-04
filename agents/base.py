@@ -57,10 +57,21 @@ class PHIGuard:
 class AuditTrail:
     """Cryptographic Tamper-Evident HMAC-SHA256 Audit Trail."""
     def __init__(self, secret_key: Optional[str] = None):
-        self.secret_key = (secret_key or os.getenv("AUDIT_SECRET_KEY", "dynamic-prompt-budget-allocator-master-audit-key-2026")).encode("utf-8")
+        self._secret_key_source = secret_key or os.getenv("AUDIT_SECRET_KEY")
+        self.secret_key: bytes = b""
         self.logs: List[Dict[str, Any]] = []
 
+    def _resolve_key(self) -> bytes:
+        if not self._secret_key_source:
+            raise SecurityException(
+                "AUDIT_SECRET_KEY environment variable must be set. "
+                "Do not use hardcoded fallback keys in production."
+            )
+        return self._secret_key_source.encode("utf-8")
+
     def log(self, actor: str, actor_tier: str, event_type: str, details: Dict[str, Any]) -> Dict[str, Any]:
+        if not self.secret_key:
+            self.secret_key = self._resolve_key()
         payload_str = json.dumps(details, sort_keys=True)
         assert_no_phi(payload_str)
         payload_hash = hashlib.sha256(payload_str.encode("utf-8")).hexdigest()
