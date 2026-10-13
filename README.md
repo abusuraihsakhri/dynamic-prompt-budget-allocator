@@ -1,5 +1,7 @@
 # Dynamic Prompt Budget Allocator
 
+### [Open the Live Application →](https://abusuraihsakhri.github.io/dynamic-prompt-budget-allocator/)
+
 A deterministic allocator for prompt-section token budgets. The browser application runs locally without a backend or external inference service.
 
 ## What it does
