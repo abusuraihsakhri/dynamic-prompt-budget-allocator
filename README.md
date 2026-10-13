@@ -1,173 +1,88 @@
 # Dynamic Prompt Budget Allocator
 
-> **Domain:** Autonomous Agent Systems & Context State Architecture
-> **Reference Guidelines & Standards:** `Distributed Systems RFC & State Machine Verification`
+A deterministic allocator for prompt-section token budgets. The browser application runs locally without a backend or external inference service.
 
-<div align="center">
+## What it does
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
-![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
-![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
+Define a total token limit, reserve tokens for model output, and enter prompt sections with an estimated token demand, minimum guaranteed tokens, and a relative priority. The allocator:
 
-</div>
+- Guarantees output headroom and all feasible section minimums.
+- Divides the remaining input capacity proportionally to priority, capped at each section's requested demand.
+- Rejects negative, non-integer and infeasible budgets.
+- Reports remaining unused tokens and exports the plan as JSON.
+- Runs entirely inside a modern browser; the same algorithm is implemented in Python.
 
----
+**Scope:** The tool plans allocation counts. It does not count actual model tokens, truncate text automatically, compress conversation history, change model-side KV caches or call a model provider.
 
-## 📖 What It Does
+## Browser application
 
-**Dynamic Prompt Budget Allocator** is an analytical platform implementing dynamic token budgeting, tool call compression, and KV-cache headroom preservation for autonomous agent systems. It provides multi-worker evaluation, cryptographic audit trails, and PHI outbound protection.
+Open [web/index.html](web/index.html) directly in a current desktop/mobile browser. For development, serve the directory locally:
 
----
+    python -m http.server 8000 --directory web
 
-## ⚙️ Key Capabilities & Algorithmic Modules
+The app has no server dependency and requires no external fonts, keys or network access. Its legacy-audit panel computes local preview thresholds; it does not create a signed audit record.
 
-- **Deterministic Calculation Engine**: Strict compliance with standard reference formulations and thresholds.
-- **Risk & Urgency Classification**: Multi-tier categorization (ROUTINE, ELEVATED, CRITICAL_STAT) with automated action recommendations.
-- **Validation & Guardrails**: Rigorous input bounds checking, NaN/Infinity rejection, and anomaly detection.
-- **Multi-Worker Evaluation**: InvariantQCWorker, SafetyEscalationWorker, and ProtocolConformanceWorker for comprehensive analysis.
+## Python library
 
----
+Install:
 
-## 💻 Installation
+    python -m pip install -e .
 
-```bash
-# Clone the repository
-git clone https://github.com/abusuraihsakhri/dynamic-prompt-budget-allocator.git
-cd dynamic-prompt-budget-allocator
+Example:
 
-# Install dependencies
-pip install fastapi uvicorn pydantic pytest
+```python
+from prompt_budgeter.allocator import allocate_budget
+
+plan = allocate_budget(
+    total_tokens=8192,
+    reserve_tokens=1024,
+    sections=[
+        {"name": "System", "requested_tokens": 1400, "minimum_tokens": 900, "priority": 5},
+        {"name": "Evidence", "requested_tokens": 5000, "minimum_tokens": 1000, "priority": 4},
+        {"name": "History", "requested_tokens": 3000, "minimum_tokens": 0, "priority": 2},
+    ],
+)
+print(plan)
 ```
 
----
+Save a corresponding JSON request in a file, then run:
 
-## 💻 CLI Quickstart & Usage
+    dynamic-prompt-budget-allocator allocate -i request.json
 
-### 1. Single Task Evaluation
-```bash
-python cli.py audit --task-id TASK-001 --target KEY-01 --primary 28.5 --secondary 14.2 --critical --status DISCORDANT
-```
+This prints the allocation plan as JSON. The Python allocator uses the standard library and can be imported independently of the audit agents.
 
-### 2. Interactive Chat
-```bash
-python cli.py chat "What is the system status?"
-```
+## Existing audit CLI and REST API
 
-### 3. Batch Processing
-```bash
-python cli.py batch -i sample.csv -o results.csv
-```
+The legacy threshold-audit implementation is preserved. Install optional dependencies:
 
-### 4. Verify Audit Trail Integrity
-```bash
-python cli.py verify-audit
-```
+    python -m pip install -e ".[api,test]"
 
-### 5. Launch REST API Server
-```bash
-python cli.py serve --host 127.0.0.1 --port 8000
-```
+Configure a strong secret **before** using its HMAC-signed audit logging:
 
-### Parameter Reference
-- `--task-id`: Unique task identifier (required)
-- `--target`: Target entity identifier (required)
-- `--primary`: Primary metric value (float, required)
-- `--secondary`: Secondary metric value (float, default: 0.0)
-- `--critical`: Flag for critical/emergency status
-- `--status`: Status descriptor (e.g., NOMINAL, DISCORDANT)
+    export AUDIT_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')"
 
-### Input Data Schema
+Then run:
 
-| Field | Description | Requirement |
-|:------|:------------|:------------|
-| `task_id` | Unique task identifier | Required |
-| `target_identifier` | Target entity identifier | Required |
-| `primary_metric` | Primary measurement value | Required |
-| `secondary_metric` | Secondary measurement value | Optional |
-| `is_critical_flag` | Emergency escalation flag | Optional |
-| `status_descriptor` | Status code descriptor | Optional |
+    python cli.py audit
+    python cli.py verify-audit
+    python cli.py serve --host 127.0.0.1 --port 8000
 
----
+The main REST service provides health, audit and chat endpoints and an additional `POST /api/allocate` endpoint accepting `total_tokens`, `reserve_tokens`, and `sections`. The alternative `prompt_budgeter.server` app also provides the allocation endpoint. For container deployment, `docker compose up --build` requires `AUDIT_SECRET_KEY` in the environment.
 
-## 🛡️ Security & Enterprise Architecture
+## Tests
 
-* **Zero-PHI Outbound Interceptor:** Active regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
-* **Input Validation:** Rejects NaN, Infinity, and malformed metric values.
-* **Secure Defaults:** No hardcoded secrets; requires `AUDIT_SECRET_KEY` environment variable.
+    python -m pip install -e ".[api,test]"
+    AUDIT_SECRET_KEY=test-only python -m pytest -q
+    node --check web/app.js
+    node --check web/allocator.js
+    node web/test_allocator.cjs
 
-### Environment Variables
+The GitHub Actions CI workflow tests Python 3.10, 3.11 and 3.12. A separate workflow deploys the static `web/` directory to GitHub Pages when Pages is configured for GitHub Actions.
 
-| Variable | Description | Required |
-|:---------|:------------|:---------|
-| `AUDIT_SECRET_KEY` | HMAC-SHA256 signing key for audit trail | Yes |
-| `MODEL_PROVIDER` | LLM provider (mock, ollama, claude, openai) | No (default: mock) |
+## Privacy and limitations
 
----
+Browser inputs stay on the user's device and are not uploaded. The legacy Python service holds dossiers and signed audit entries in process memory. Its regular-expression PHI guard does not establish HIPAA compliance or reliable de-identification; do not input patient records or secrets. The legacy audit modules classify user-supplied numeric metrics against fixed demonstration thresholds, not clinically validated standards.
 
-## 🧪 Testing & Verification
+## License
 
-Run the automated test suite:
-
-```bash
-# Set test audit key
-export AUDIT_SECRET_KEY="test-audit-key"
-
-# Run tests
-pytest -v
-```
-
-Execute high-throughput batch simulation benchmarks:
-
-```bash
-python simulator.py 1000
-```
-
----
-
-## 🐳 Container Deployment
-
-```bash
-# Build and run with Docker Compose
-AUDIT_SECRET_KEY=$(python -c "import secrets; print(secrets.token_hex(32))") docker-compose up -d
-
-# Or build and run manually
-docker build -t dynamic-prompt-budget-allocator .
-docker run -p 8000:8000 -e AUDIT_SECRET_KEY=your-secret-key dynamic-prompt-budget-allocator
-```
-
----
-
-## 📁 Project Structure
-
-```
-dynamic-prompt-budget-allocator/
-├── agents/                  # Core agent modules
-│   ├── api.py              # FastAPI REST endpoints
-│   ├── base.py             # Security, PHI guard, audit trail
-│   ├── models.py           # Pydantic data models
-│   ├── supervisor.py       # Main supervisor orchestrator
-│   ├── workers.py          # Specialized evaluation workers
-│   ├── llm_factory.py      # LLM provider factory
-│   ├── metrics.py          # Prometheus metrics
-│   ├── learning.py         # Bayesian calibration engine
-│   └── streamer.py         # WebSocket telemetry
-├── prompt_budgeter/        # Alternative implementation
-├── tests/                  # Test suite
-├── web/                    # Web console (HTML)
-├── cli.py                  # Main CLI entry point
-├── enrichment.py           # Budget enrichment features
-├── simulator.py            # High-throughput simulator
-├── pyproject.toml          # Project configuration
-├── Dockerfile              # Container build
-└── docker-compose.yml      # Container orchestration
-```
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT. See [LICENSE](LICENSE).
