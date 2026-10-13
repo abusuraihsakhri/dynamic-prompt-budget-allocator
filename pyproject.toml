@@ -8,10 +8,9 @@ version = "2.0.0"
 description = "PromptBudgeter: Dynamic Token Budgeting & Key-Value Cache Compressor"
 readme = "README.md"
 authors = [{ name = "Dr. Abu Suraih Sakhri", email = "abusuraih@example.com" }]
-license = { text = "MIT" }
+license = "MIT"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Topic :: Security/Cryptography",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
@@ -29,3 +28,10 @@ dynamic-prompt-budget-allocator = "prompt_budgeter.cli:main"
 [project.urls]
 Homepage = "https://github.com/abusuraihsakhri/dynamic-prompt-budget-allocator"
 Repository = "https://github.com/abusuraihsakhri/dynamic-prompt-budget-allocator.git"
+
+[tool.setuptools]
+py-modules = ["cli", "enrichment", "simulator", "prompt_budgeter_app"]
+
+[tool.setuptools.packages.find]
+include = ["agents*", "prompt_budgeter*"]
+exclude = ["tests*", "web*"]
