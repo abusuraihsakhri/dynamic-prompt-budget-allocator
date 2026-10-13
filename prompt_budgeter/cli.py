@@ -24,6 +24,9 @@ def main(argv=None):
     p_audit.add_argument("--critical", action="store_true")
     p_audit.add_argument("--status", default="DISCORDANT")
 
+    p_allocate = subparsers.add_parser("allocate", help="Allocate tokens using a JSON request")
+    p_allocate.add_argument("-i", "--input", required=True)
+
     # Chat
     p_chat = subparsers.add_parser("chat", help="System configuration query")
     p_chat.add_argument("query", nargs="+")
@@ -39,6 +42,18 @@ def main(argv=None):
     p_serve.add_argument("--port", type=int, default=8000)
 
     args = parser.parse_args(argv)
+
+    if args.command == "allocate":
+        from .allocator import allocate_budget
+        try:
+            with open(args.input, encoding="utf-8") as source:
+                request = json.load(source)
+            result = allocate_budget(request["total_tokens"], request["sections"], request.get("reserve_tokens", 0))
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            print("Allocation error: {}".format(exc), file=sys.stderr)
+            return 1
+        print(json.dumps(result, indent=2))
+        return 0
 
     if args.command == "audit":
         payload = FrontierPayload(
