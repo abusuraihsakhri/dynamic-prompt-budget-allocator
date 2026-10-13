@@ -4,6 +4,7 @@ FastAPI REST API Server for PromptBudgeter: Dynamic Token Budgeting & Key-Value 
 from typing import Dict, Any
 from .models import FrontierPayload
 from .agents import PromptBudgetCoordinator
+from .allocator import allocate_budget
 
 coordinator = PromptBudgetCoordinator()
 
@@ -30,6 +31,19 @@ def create_app():
 
         class ChatRequest(BaseModel):
             query: str
+
+        class AllocationRequest(BaseModel):
+            total_tokens: int
+            reserve_tokens: int = 0
+            sections: list
+
+        @app.post("/api/allocate")
+        def api_allocate(req: AllocationRequest):
+            from fastapi import HTTPException
+            try:
+                return allocate_budget(req.total_tokens, req.sections, req.reserve_tokens)
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
 
         @app.get("/health")
         def health():
