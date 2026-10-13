@@ -1,11 +1,11 @@
 {
   "suite_name": "Dynamic Prompt Budget Allocator Golden Benchmark Test Suite",
   "system_slug": "dynamic-prompt-budget-allocator",
-  "standard_reference": "CAP / CLSI / NIST Standards",
+  "standard_reference": "Repository demonstration thresholds (not external clinical or cryptographic standards)",
   "test_cases": [
     {
       "case_id": "BENCH-01-NOMINAL",
-      "description": "Standard nominal flow with parameter values within normal physiological / cryptographic range.",
+      "description": "Nominal demonstration metrics within the fixed internal thresholds.",
       "payload": {
         "task_id": "TASK-BENCH-01",
         "target_identifier": "TARGET-CALIB-OK",
@@ -33,11 +33,11 @@
     },
     {
       "case_id": "BENCH-03-CRITICAL-STAT",
-      "description": "Emergency critical condition with secondary kinetics breach demanding closed-loop escalation.",
+      "description": "Critical-flag demonstration causing escalation in the fixed internal threshold evaluator.",
       "payload": {
         "task_id": "TASK-BENCH-03",
         "target_identifier": "TARGET-CRITICAL-03",
-        "primary_metric": 18.0,
+        "primary_metric": 18,
         "secondary_metric": 19.5,
         "status_descriptor": "DISCORDANT_ANOMALY",
         "is_critical_flag": true
