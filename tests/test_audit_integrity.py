@@ -20,3 +20,9 @@ def test_signature_tampering():
     trail.log("test", "unit", "created", {"value": 1})
     trail.logs[0]["current_hash"] = "0" * 64
     assert not trail.verify_integrity()
+
+
+def test_mock_does_not_claim_scientific_verification():
+    from agents.llm_factory import LLMFactory
+    response = LLMFactory.create("mock").invoke("example request")
+    assert "No inference or scientific verification performed" in response
