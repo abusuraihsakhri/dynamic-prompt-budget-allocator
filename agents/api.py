@@ -4,7 +4,8 @@ FastAPI REST API Server for Dynamic Prompt Budget Allocator.
 from typing import Dict, Any, List
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from .base import AuditLogger, PHIGuard
+from .base import AuditLogger, PHIGuard, SecurityException
+from prompt_budgeter.allocator import allocate_budget
 from .models import SystemTaskPayload, ConsensusDossier
 from .supervisor import SystemSupervisor
 
@@ -35,9 +36,26 @@ def metrics():
     }
 
 
+class AllocationRequest(BaseModel):
+    total_tokens: int
+    reserve_tokens: int = 0
+    sections: List[Dict[str, Any]]
+
+
+@app.post("/api/allocate")
+def api_allocate(payload: AllocationRequest):
+    try:
+        return allocate_budget(payload.total_tokens, payload.sections, payload.reserve_tokens)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
 @app.post("/api/audit")
 def api_audit(payload: SystemTaskPayload):
-    dossier = supervisor.process_task(payload)
+    try:
+        dossier = supervisor.process_task(payload)
+    except SecurityException:
+        raise HTTPException(status_code=422, detail="Restricted identifier in request")
     return dossier.to_dict()
 
 
@@ -47,7 +65,7 @@ def api_chat(req: ChatRequest):
         ans = supervisor.query_supervisory_chat(req.query)
         return {"response": ans}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Query rejected")
 
 
 @app.get("/api/audit/logs")
