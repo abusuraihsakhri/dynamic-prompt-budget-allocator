@@ -67,7 +67,7 @@ Then run:
     python cli.py verify-audit
     python cli.py serve --host 127.0.0.1 --port 8000
 
-The main REST service provides health, audit and chat endpoints and an additional \`POST /api/allocate\` endpoint accepting \`total_tokens\`, \`reserve_tokens\`, and \`sections\`. The alternative \`prompt_budgeter.server\` app also provides the allocation endpoint. For container deployment, \`docker compose up --build\` requires \`AUDIT_SECRET_KEY\` in the environment.
+The main REST service provides health, audit and chat endpoints and an additional `POST /api/allocate` endpoint accepting `total_tokens`, `reserve_tokens`, and `sections`. The alternative `prompt_budgeter.server` app also provides the allocation endpoint. For container deployment, `docker compose up --build` requires `AUDIT_SECRET_KEY` in the environment.
 
 ## Tests
 
@@ -77,7 +77,7 @@ The main REST service provides health, audit and chat endpoints and an additiona
     node --check web/allocator.js
     node web/test_allocator.cjs
 
-The GitHub Actions CI workflow tests Python 3.10, 3.11 and 3.12. A separate workflow deploys the static \`web/\` directory to GitHub Pages when Pages is configured for GitHub Actions.
+The GitHub Actions CI workflow tests Python 3.10, 3.11 and 3.12. A separate workflow deploys the static `web/` directory to GitHub Pages when Pages is configured for GitHub Actions.
 
 ## Privacy and limitations
 
